@@ -10,6 +10,7 @@ function IngredientPanel({ ingredients, setIngredients }) {
 
     if (!ingredients.includes(ingredient)) {
       const updated = [...ingredients, ingredient];
+      console.log(updated);
       setIngredients(updated);
     }
 
@@ -37,6 +38,7 @@ function IngredientPanel({ ingredients, setIngredients }) {
 
   const handleSelect = (ingredient) => {
     addIngredient(ingredient);
+    console.log("You have selected the ingredient ", ingredient);
   };
 
   const handleKeyDown = (e) => {
