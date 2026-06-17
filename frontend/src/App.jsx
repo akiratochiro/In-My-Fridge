@@ -3,6 +3,7 @@ import IngredientPanel from './components/IngredientPanel/IngredientPanel';
 import RecipePanel from './components/RecipePanel/RecipePanel';
 import { fetchRecipes } from './services/recipesService';
 
+
 function App() {
   const [ingredients, setIngredients] = useState([]);
   const [recipes, setRecipes] = useState([]);

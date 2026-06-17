@@ -5,16 +5,19 @@ const ingredientsRoute = require('./routes/ingredients');
 const recipesRoute = require('./routes/recipes');
 
 const app = express();
-const PORT = 3333;
+const PORT = process.env.PORT || 3333;
 
 // Middlewares
-app.use(cors());
-app.use(express.json());
+app.use(cors({
+  origin: '*', 
+}));app.use(express.json());
 
 // Health check
 app.get('/', (req, res) => {
   res.json({
-    message: 'In My Fridge API running'
+    status: 'ok',
+    service: 'in-my-fridge-api',
+    time: new Date().toISOString()
   });
 });
 

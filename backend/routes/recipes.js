@@ -1,37 +1,63 @@
-const express = require('express');
-const axios = require('axios');
+const express = require("express");
+const axios = require("axios");
 
 const router = express.Router();
 
-router.get('/', async (req, res) => {
+router.get("/", async (req, res) => {
   try {
-    const selectedIngredient = req.query.ingredients?.toLowerCase();
+    let ingredients = req.query.ingredients;
 
-    if (!selectedIngredient) {
+    if (!ingredients) {
       return res.status(400).json({
-        message: 'Ingredient is required'
+        message: "Ingredients are required",
       });
     }
 
-    // Primeira chamada: receitas que contêm o ingrediente
-    const filterResponse = await axios.get(
-      `https://www.themealdb.com/api/json/v1/1/filter.php?i=${selectedIngredient}`
-    );
+    // transforma em array
+    const ingredientList = ingredients
+      .split(",")
+      .map((i) => i.trim().toLowerCase())
+      .filter(Boolean);
 
-    if (!filterResponse.data.meals) {
+    if (ingredientList.length === 0) {
       return res.json([]);
     }
 
-    const firstFiveMeals = filterResponse.data.meals.slice(0, 5);
+    // 1. busca por cada ingrediente
+    const responses = await Promise.all(
+      ingredientList.map((ing) =>
+        axios.get(
+          `https://www.themealdb.com/api/json/v1/1/filter.php?i=${ing}`,
+        ),
+      ),
+    );
 
-    // Segunda chamada: detalhes completos de cada receita
+    // 2. transforma em sets de IDs
+    const sets = responses.map(
+      (res) => new Set((res.data.meals || []).map((meal) => meal.idMeal)),
+    );
+
+    // 3. interseção de sets (AND lógico)
+    const intersection = [
+      ...sets.reduce((acc, set) => {
+        return new Set([...acc].filter((x) => set.has(x)));
+      }),
+    ];
+
+    if (intersection.length === 0) {
+      return res.json([]);
+    }
+
+    // 4. pega detalhes completos (limitado a 5)
+    const finalIds = intersection.slice(0, 10);
+
     const detailedRecipes = await Promise.all(
-      firstFiveMeals.map(async (meal) => {
-        const detailsResponse = await axios.get(
-          `https://www.themealdb.com/api/json/v1/1/search.php?s=${encodeURIComponent(meal.strMeal)}`
+      finalIds.map(async (id) => {
+        const response = await axios.get(
+          `https://www.themealdb.com/api/json/v1/1/lookup.php?i=${id}`,
         );
 
-        const recipe = detailsResponse.data.meals?.[0];
+        const recipe = response.data.meals?.[0];
 
         if (!recipe) return null;
 
@@ -42,18 +68,21 @@ router.get('/', async (req, res) => {
           area: recipe.strArea,
           category: recipe.strCategory,
           instructions: recipe.strInstructions,
-          youtube: recipe.strYoutube
+          ingredients: Array.from({ length: 20 })
+            .map((_, i) => recipe[`strIngredient${i + 1}`])
+            .filter(Boolean)
+            .filter((ing) => ing.trim() !== ""),
+          youtube: recipe.strYoutube,
         };
-      })
+      }),
     );
 
     res.json(detailedRecipes.filter(Boolean));
-
   } catch (error) {
     console.error(error);
 
     res.status(500).json({
-      message: 'Failed to fetch recipes'
+      message: "Failed to fetch recipes",
     });
   }
 });

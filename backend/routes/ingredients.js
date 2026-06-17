@@ -3,6 +3,10 @@ const axios = require('axios');
 
 const router = express.Router();
 
+/**
+ * GET /ingredients?q=ch
+ * Returns autocomplete list of ingredients
+ */
 router.get('/', async (req, res) => {
   try {
     const query = req.query.q?.toLowerCase() || '';
@@ -11,7 +15,7 @@ router.get('/', async (req, res) => {
       'https://www.themealdb.com/api/json/v1/1/list.php?i=list'
     );
 
-    const ingredients = response.data.meals.map(
+    const ingredients = (response.data.meals || []).map(
       item => item.strIngredient
     );
 
